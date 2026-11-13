@@ -1,0 +1,361 @@
+local Players, Lighting, UserInputService, RunService, TweenService, Workspace, HttpService = game:GetService("Players"), game:GetService("Lighting"), game:GetService("UserInputService"), game:GetService("RunService"), game:GetService("TweenService"), workspace, game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+if PlayerGui:FindFirstChild("NebesnyGui") then PlayerGui.NebesnyGui:Destroy() end
+if PlayerGui:FindFirstChild("NebesnyStatsGui") then PlayerGui.NebesnyStatsGui:Destroy() end
+
+local Theme = {Bg = Color3.fromRGB(18, 18, 22), Side = Color3.fromRGB(14, 14, 18), Elem = Color3.fromRGB(28, 28, 35), Accent = Color3.fromRGB(80, 180, 120), Text = Color3.fromRGB(240, 240, 245), Sub = Color3.fromRGB(150, 150, 160)}
+local Settings = {FOV = 70, Time = 14, Skybox = "Roblox Default", Bright = false, FPSUnlock = false, GuiTransparency = 0, Stretch = 1}
+local UIElements = {}
+
+local MainGui = Instance.new("ScreenGui")
+MainGui.Name, MainGui.ResetOnSpawn, MainGui.Parent = "NebesnyGui", false, PlayerGui
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size, ToggleBtn.Position = UDim2.new(0, 150, 0, 40), UDim2.new(0, 20, 0, 80)
+ToggleBtn.BackgroundColor3, ToggleBtn.Text, ToggleBtn.TextColor3 = Theme.Bg, "🌌 NEBESNY VISUAL", Theme.Text
+ToggleBtn.Font, ToggleBtn.TextSize, ToggleBtn.Active, ToggleBtn.ZIndex = Enum.Font.GothamBold, 13, true, 100
+ToggleBtn.Parent = MainGui
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+
+local Window = Instance.new("Frame")
+Window.Size, Window.Position = UDim2.new(0, 580, 0, 360), UDim2.new(0.5, -290, 0.5, -180)
+Window.BackgroundColor3, Window.Visible, Window.Active, Window.ZIndex = Theme.Bg, false, true, 50
+Window.Parent = MainGui
+Instance.new("UICorner", Window).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", Window).Color = Color3.fromRGB(50, 50, 60)
+
+local isOpen, debounce = false, false
+local function ToggleMenu()
+    if debounce then return end
+    debounce = true; isOpen = not isOpen; Window.Visible = isOpen
+    task.wait(0.2); debounce = false
+end
+ToggleBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then ToggleMenu() end end)
+
+local TopBar = Instance.new("Frame")
+TopBar.Size, TopBar.BackgroundTransparency, TopBar.Active, TopBar.ZIndex = UDim2.new(1, 0, 0, 40), 1, true, 55
+TopBar.Parent = Window
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size, CloseBtn.Position = UDim2.new(0, 28, 0, 28), UDim2.new(1, -38, 0, 6)
+CloseBtn.BackgroundColor3, CloseBtn.Text, CloseBtn.TextColor3 = Color3.fromRGB(50, 30, 30), "X", Color3.fromRGB(255, 100, 100)
+CloseBtn.Font, CloseBtn.ZIndex = Enum.Font.GothamBold, 60
+CloseBtn.Parent = TopBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+CloseBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then isOpen = false; Window.Visible = false end end)
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Size, Sidebar.Position, Sidebar.BackgroundColor3 = UDim2.new(0, 130, 1, -50), UDim2.new(0, 5, 0, 45), Theme.Side
+Sidebar.Parent = Window
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
+local SideLayout = Instance.new("UIListLayout")
+SideLayout.Padding, SideLayout.SortOrder = UDim.new(0, 4), Enum.SortOrder.LayoutOrder
+SideLayout.Parent = Sidebar
+
+local Content = Instance.new("Frame")
+Content.Size, Content.Position, Content.BackgroundTransparency, Content.ZIndex = UDim2.new(1, -145, 1, -50), UDim2.new(0, 140, 0, 45), 1, 52
+Content.Parent = Window
+
+local Tabs = {}
+local function CreateTab(name, icon)
+    local Btn = Instance.new("TextButton")
+    Btn.Size, Btn.BackgroundColor3 = UDim2.new(1, -10, 0, 34), Theme.Side
+    Btn.Text, Btn.TextColor3 = "  " .. icon .. "  " .. name, Theme.Sub
+    Btn.Font, Btn.TextSize, Btn.TextXAlignment, Btn.Active = Enum.Font.GothamSemibold, 13, Enum.TextXAlignment.Left, true
+    Btn.Parent = Sidebar
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    local Frame = Instance.new("ScrollingFrame")
+    Frame.Size, Frame.BackgroundTransparency, Frame.BorderSizePixel = UDim2.new(1, 0, 1, 0), 1, 0
+    Frame.ScrollBarThickness, Frame.Visible, Frame.ZIndex = 3, false, 52
+    Frame.Parent = Content
+    local Layout = Instance.new("UIListLayout")
+    Layout.Padding = UDim.new(0, 6); Layout.Parent = Frame
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() Frame.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 20) end)
+    Tabs[name] = { Btn = Btn, Frame = Frame }
+    Btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            for _, t in pairs(Tabs) do t.Btn.BackgroundColor3 = Theme.Side; t.Btn.TextColor3 = Theme.Sub; t.Frame.Visible = false end
+            Btn.BackgroundColor3 = Theme.Elem; Btn.TextColor3 = Theme.Text; Frame.Visible = true
+        end
+    end)
+    return Frame
+end
+
+local function AddSection(parent, text)
+    local Label = Instance.new("TextLabel")
+    Label.Size, Label.BackgroundTransparency, Label.Text = UDim2.new(1, -10, 0, 20), 1, text
+    Label.TextColor3, Label.Font, Label.TextSize, Label.TextXAlignment = Theme.Text, Enum.Font.GothamBold, 12, Enum.TextXAlignment.Left
+    Label.Parent = parent
+end
+
+local function AddBtn(parent, text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size, Btn.BackgroundColor3, Btn.Text, Btn.TextColor3 = UDim2.new(1, -10, 0, 30), Theme.Elem, text, Theme.Text
+    Btn.Font, Btn.TextSize, Btn.ZIndex = Enum.Font.Gotham, 12, 53
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Btn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then pcall(callback) end end)
+    return Btn
+end
+
+local function AddTgl(parent, text, default, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size, Btn.BackgroundColor3, Btn.Text, Btn.ZIndex = UDim2.new(1, -10, 0, 34), Theme.Elem, "", 53
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    local Label = Instance.new("TextLabel")
+    Label.Size, Label.Position, Label.BackgroundTransparency = UDim2.new(1, -60, 1, 0), UDim2.new(0, 10, 0, 0), 1
+    Label.Text, Label.TextColor3, Label.Font, Label.TextSize, Label.TextXAlignment = text, Theme.Text, Enum.Font.Gotham, 12, Enum.TextXAlignment.Left
+    Label.Parent = Btn
+    local Track = Instance.new("Frame")
+    Track.Size, Track.Position, Track.BackgroundColor3 = UDim2.new(0, 34, 0, 18), UDim2.new(1, -44, 0.5, -9), Color3.fromRGB(50, 50, 60)
+    Track.Parent = Btn
+    Instance.new("UICorner", Track).CornerRadius = UDim.new(1, 0)
+    local Knob = Instance.new("Frame")
+    Knob.Size, Knob.Position, Knob.BackgroundColor3 = UDim2.new(0, 14, 0, 14), UDim2.new(0, 2, 0.5, -7), Theme.Text
+    Knob.Parent = Track
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    local State = default or false
+    local function UpdateVisual()
+        if State then Track.BackgroundColor3 = Theme.Accent; Knob.Position = UDim2.new(1, -16, 0.5, -7)
+        else Track.BackgroundColor3 = Color3.fromRGB(50, 50, 60); Knob.Position = UDim2.new(0, 2, 0.5, -7) end
+    end
+    if State then UpdateVisual() end
+    Btn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then State = not State; UpdateVisual(); pcall(function() callback(State) end) end end)
+    Btn.Set = function(val) State = val; UpdateVisual(); pcall(function() callback(State) end) end
+    return Btn
+end
+
+local function AddSld(parent, text, min, max, default, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size, Frame.BackgroundColor3, Frame.ZIndex = UDim2.new(1, -10, 0, 44), Theme.Elem, 53
+    Frame.Parent = parent
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    local Label = Instance.new("TextLabel")
+    Label.Size, Label.Position, Label.BackgroundTransparency = UDim2.new(1, -20, 0, 18), UDim2.new(0, 10, 0, 4), 1
+    Label.Text, Label.TextColor3, Label.Font, Label.TextSize, Label.TextXAlignment = text .. ": " .. tostring(default), Theme.Text, Enum.Font.Gotham, 12, Enum.TextXAlignment.Left
+    Label.Parent = Frame
+    local Bar = Instance.new("Frame")
+    Bar.Size, Bar.Position, Bar.BackgroundColor3 = UDim2.new(1, -20, 0, 4), UDim2.new(0, 10, 0, 28), Color3.fromRGB(50, 50, 60)
+    Bar.Parent = Frame
+    Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
+    local Fill = Instance.new("Frame")
+    Fill.Size, Fill.BackgroundColor3 = UDim2.new((default - min) / (max - min), 0, 1, 0), Theme.Accent
+    Fill.Parent = Bar
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+    local Knob = Instance.new("Frame")
+    Knob.Size, Knob.Position, Knob.BackgroundColor3 = UDim2.new(0, 10, 0, 10), UDim2.new((default - min) / (max - min), -5, 0.5, -5), Theme.Text
+    Knob.Parent = Bar
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    local Dragging = false
+    local function Update(input)
+        if Bar.AbsoluteSize.X <= 0 then return end
+        local relX = math.clamp(input.Position.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
+        local percent = relX / Bar.AbsoluteSize.X
+        local value = math.floor(min + (max - min) * percent)
+        Fill.Size = UDim2.new(percent, 0, 1, 0); Knob.Position = UDim2.new(percent, -5, 0.5, -5); Label.Text = text .. ": " .. tostring(value)
+        pcall(function() callback(value) end)
+    end
+    Bar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Dragging = true; Update(i) end end)
+    UserInputService.InputChanged:Connect(function(i) if Dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then Update(i) end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Dragging = false end end)
+    Frame.Set = function(val) local pc = (val - min) / (max - min); Fill.Size = UDim2.new(pc, 0, 1, 0); Knob.Position = UDim2.new(pc, -5, 0.5, -5); Label.Text = text .. ": " .. tostring(val); pcall(function() callback(val) end) end
+    return Frame
+end
+
+local function AddDrop(parent, text, options, callback)
+    local MainBtn = Instance.new("TextButton")
+    MainBtn.Size, MainBtn.BackgroundColor3, MainBtn.Text, MainBtn.TextColor3 = UDim2.new(1, -10, 0, 32), Theme.Elem, "  " .. text .. " ▼", Theme.Text
+    MainBtn.Font, MainBtn.TextSize, MainBtn.TextXAlignment, MainBtn.ZIndex = Enum.Font.Gotham, 12, Enum.TextXAlignment.Left, 53
+    MainBtn.Parent = parent
+    Instance.new("UICorner", MainBtn).CornerRadius = UDim.new(0, 6)
+    local List = Instance.new("ScrollingFrame")
+    List.Size, List.BackgroundColor3, List.BorderSizePixel, List.ScrollBarThickness, List.Visible, List.ZIndex = UDim2.new(1, -10, 0, 0), Theme.Side, 0, 3, false, 60
+    List.Parent = parent
+    Instance.new("UICorner", List).CornerRadius = UDim.new(0, 6)
+    local Layout = Instance.new("UIListLayout"); Layout.Padding = UDim.new(0, 2); Layout.Parent = List
+    local isOpen = false
+    MainBtn.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            isOpen = not isOpen; List.Visible = isOpen; MainBtn.Text = "  " .. text .. (isOpen and " ▲" or " ▼")
+            if isOpen then List.Size = UDim2.new(1, -10, 0, math.min(#options * 26, 120)); List.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 4) end
+        end
+    end)
+    for _, opt in ipairs(options) do
+        local OptBtn = Instance.new("TextButton")
+        OptBtn.Size, OptBtn.BackgroundColor3, OptBtn.Text, OptBtn.TextColor3 = UDim2.new(1, 0, 0, 24), Theme.Side, "  " .. opt, Theme.Sub
+        OptBtn.Font, OptBtn.TextSize, OptBtn.TextXAlignment, OptBtn.ZIndex = Enum.Font.Gotham, 12, Enum.TextXAlignment.Left, 61
+        OptBtn.Parent = List
+        OptBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then MainBtn.Text = "  " .. text .. ": " .. opt .. " ▼"; isOpen = false; List.Visible = false; pcall(function() callback(opt) end) end end)
+    end
+    return MainBtn, List
+end
+
+local function Drag(Part, Target)
+    local Drg, Start, StartPos = false, nil, nil
+    Part.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Drg = true; Start = i.Position; StartPos = Target.Position end end)
+    UserInputService.InputChanged:Connect(function(i) if Drg and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local d = i.Position - Start; Target.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + d.X, StartPos.Y.Scale, StartPos.Y.Offset + d.Y) end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Drg = false end end)
+end
+Drag(TopBar, Window)
+local configFolder = "NebesnyConfigs"
+pcall(function() if not isfolder(configFolder) then makefolder(configFolder) end end)
+local currentConfig, configListObj, configBtnObj, configNameBox = nil, nil, nil, nil
+
+local function RefreshConfigList()
+    if not configListObj then return end
+    for _, child in ipairs(configListObj:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    local files = {}; pcall(function() files = listfiles(configFolder) end)
+    for _, file in ipairs(files) do
+        local name = file:gsub(configFolder .. "\\", ""):gsub(configFolder .. "/", ""):gsub(".json", "")
+        if name ~= "" then
+            local OptBtn = Instance.new("TextButton")
+            OptBtn.Size, OptBtn.BackgroundColor3, OptBtn.Text, OptBtn.TextColor3 = UDim2.new(1, 0, 0, 24), Theme.Side, "  " .. name, Theme.Sub
+            OptBtn.Font, OptBtn.TextSize, OptBtn.ZIndex = Enum.Font.Gotham, 12, 61
+            OptBtn.Parent = configListObj
+            OptBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then configBtnObj.Text = "  Selected: " .. name .. " ▼"; currentConfig = name; configListObj.Visible = false end end)
+        end
+    end
+end
+
+local Skies = {
+    ["HD"] = { Bk = "http://www.roblox.com/asset/?id=16553658937", Dn = "http://www.roblox.com/asset/?id=16553660713", Ft = "http://www.roblox.com/asset/?id=16553662144", Lf = "http://www.roblox.com/asset/?id=16553664042", Rt = "http://www.roblox.com/asset/?id=16553665766", Up = "http://www.roblox.com/asset/?id=16553667750" },
+    ["Black Storm"] = { Bk = "rbxassetid://15502511288", Dn = "rbxassetid://15502508460", Ft = "rbxassetid://15502510289", Lf = "rbxassetid://15502507918", Rt = "rbxassetid://15502509398", Up = "rbxassetid://15502511911" },
+    ["Snow"] = { Bk = "http://www.roblox.com/asset/?id=155657655", Dn = "http://www.roblox.com/asset/?id=155674246", Ft = "http://www.roblox.com/asset/?id=155657609", Lf = "http://www.roblox.com/asset/?id=155657671", Rt = "http://www.roblox.com/asset/?id=155657619", Up = "http://www.roblox.com/asset/?id=155674931" },
+    ["Blue Space"] = { Bk = "rbxassetid://15536110634", Dn = "rbxassetid://15536112543", Ft = "rbxassetid://15536116141", Lf = "rbxassetid://15536114370", Rt = "rbxassetid://15536118762", Up = "rbxassetid://15536117282" },
+    ["Sunset"] = { Bk = "rbxassetid://600830446", Dn = "rbxassetid://600831635", Ft = "rbxassetid://600832720", Lf = "rbxassetid://600886090", Rt = "rbxassetid://600833862", Up = "rbxassetid://600835177" },
+    ["Galaxy"] = { Bk = "rbxassetid://15983968922", Dn = "rbxassetid://15983966825", Ft = "rbxassetid://15983965025", Lf = "rbxassetid://15983967420", Rt = "rbxassetid://15983966246", Up = "rbxassetid://15983964246" },
+    ["Roblox Default"] = { Bk = "rbxasset://textures/sky/sky512_bk.tex", Dn = "rbxasset://textures/sky/sky512_dn.tex", Ft = "rbxasset://textures/sky/sky512_ft.tex", Lf = "rbxasset://textures/sky/sky512_lf.tex", Rt = "rbxasset://textures/sky/sky512_rt.tex", Up = "rbxasset://textures/sky/sky512_up.tex" }
+}
+
+local function SetSky(name)
+    local d = Skies[name]; if not d then return end
+    local s = Lighting:FindFirstChild("Nebesny_Sky") or Instance.new("Sky", Lighting)
+    s.Name = "Nebesny_Sky"; s.SkyboxBk = d.Bk; s.SkyboxDn = d.Dn; s.SkyboxFt = d.Ft; s.SkyboxLf = d.Lf; s.SkyboxRt = d.Rt; s.SkyboxUp = d.Up
+end
+local function ResetSky() local s = Lighting:FindFirstChild("Nebesny_Sky"); if s then s:Destroy() end end
+
+local function WaterAction(action, color)
+    local t = Workspace:FindFirstChildOfClass("Terrain")
+    if t then
+        if action == "remove" then t.WaterTransparency = 1; t.WaterWaveSize = 0
+        elseif action == "restore" then t.WaterTransparency = 0.3; t.WaterWaveSize = 0.15
+        elseif action == "color" then t.WaterColor = color; t.WaterTransparency = 0.3 end
+    end
+    task.spawn(function()
+        for _, o in ipairs(Workspace:GetDescendants()) do
+            if o:IsA("BasePart") and o ~= t then
+                local n = string.lower(o.Name)
+                if o.Material == Enum.Material.Water or string.find(n, "water") or string.find(n, "ocean") then
+                    if action == "remove" then o.Transparency = 1
+                    elseif action == "restore" then o.Transparency = 0.5
+                    elseif action == "color" then o.Color = color; o.Transparency = 0.5 end
+                end
+            end
+        end
+    end)
+end
+
+local function ToggleOptimize(state)
+    if state then
+        Lighting.Brightness, Lighting.Ambient, Lighting.OutdoorAmbient = 3, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255)
+        Lighting.FogEnd, Lighting.GlobalShadows = 1e9, false
+        for _, v in ipairs(Lighting:GetChildren()) do if v:IsA("PostEffect") then v.Enabled = false end end
+    else
+        Lighting.Brightness, Lighting.Ambient, Lighting.OutdoorAmbient = 2, Color3.fromRGB(70, 70, 70), Color3.fromRGB(128, 128, 128)
+        Lighting.FogEnd, Lighting.GlobalShadows = 100000, true
+    end
+end
+
+local function ApplyVisualStretch()
+    if Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = Settings.FOV * Settings.Stretch end
+end
+
+local VisualTab = CreateTab("Visual", "👁️")
+AddSection(VisualTab, "Camera")
+UIElements["FOV"] = AddSld(VisualTab, "Field of view", 50, 120, 70, function(v) Settings.FOV = v; ApplyVisualStretch() end)
+UIElements["Stretch"] = AddSld(VisualTab, "Visual stretch (%)", 100, 150, 100, function(v) Settings.Stretch = v / 100; ApplyVisualStretch() end)
+
+AddSection(VisualTab, "Time")
+UIElements["Time"] = AddSld(VisualTab, "Time of day", 0, 24, 14, function(v) Settings.Time = v; Lighting.ClockTime = v end)
+AddSection(VisualTab, "Skybox")
+AddBtn(VisualTab, "Reset Skybox", ResetSky)
+UIElements["Skybox"] = AddDrop(VisualTab, "Select skybox", {"HD", "Black Storm", "Snow", "Blue Space", "Sunset", "Galaxy", "Roblox Default"}, function(opt) Settings.Skybox = opt; SetSky(opt) end)
+
+local WaterTab = CreateTab("Water", "🌊")
+AddSection(WaterTab, "Water Color")
+AddBtn(WaterTab, "Blue", function() WaterAction("color", Color3.fromRGB(12, 84, 92)) end)
+AddBtn(WaterTab, "Red", function() WaterAction("color", Color3.fromRGB(150, 30, 30)) end)
+AddBtn(WaterTab, "Green", function() WaterAction("color", Color3.fromRGB(30, 150, 30)) end)
+AddSection(WaterTab, "Visibility")
+AddBtn(WaterTab, "Remove Water", function() WaterAction("remove") end)
+AddBtn(WaterTab, "Restore Water", function() WaterAction("restore") end)
+
+local OptTab = CreateTab("Optimize", "🚀")
+AddSection(OptTab, "Graphics")
+UIElements["Bright"] = AddTgl(OptTab, "Bright / No Shadows", false, function(s) Settings.Bright = s; ToggleOptimize(s) end)
+AddSection(OptTab, "FPS Mobile")
+UIElements["FPSUnlock"] = AddTgl(OptTab, "FPS Unlock", false, function(s) Settings.FPSUnlock = s; pcall(function() if setfpscap then setfpscap(s and 0 or 60) end end) end)
+
+local SetTab = CreateTab("Settings", "⚙️")
+AddSection(SetTab, "GUI Appearance")
+UIElements["GuiTransparency"] = AddSld(SetTab, "GUI Transparency", 0, 100, 0, function(v) Settings.GuiTransparency = v / 100; Window.BackgroundTransparency = Settings.GuiTransparency; Sidebar.BackgroundTransparency = Settings.GuiTransparency end)
+AddBtn(SetTab, "Theme: Green (Default)", function() Theme.Accent = Color3.fromRGB(80, 180, 120); ToggleBtn.BackgroundColor3 = Theme.Bg end)
+AddBtn(SetTab, "Theme: Red", function() Theme.Accent = Color3.fromRGB(200, 50, 50); ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 15, 15) end)
+AddBtn(SetTab, "Theme: Blue", function() Theme.Accent = Color3.fromRGB(50, 100, 200); ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 20, 30) end)
+
+local ConfTab = CreateTab("Configs", "💾")
+AddSection(ConfTab, "Manage Configs")
+configNameBox = Instance.new("TextBox")
+configNameBox.Size, configNameBox.BackgroundColor3, configNameBox.PlaceholderText = UDim2.new(1, -10, 0, 32), Theme.Elem, "Enter config name..."
+configNameBox.Text, configNameBox.TextColor3, configNameBox.Font, configNameBox.TextSize, configNameBox.ZIndex = "", Theme.Text, Enum.Font.Gotham, 12, 53
+configNameBox.Parent = ConfTab
+Instance.new("UICorner", configNameBox).CornerRadius = UDim.new(0, 6)
+AddBtn(ConfTab, "Save Current Settings", function() if configNameBox.Text == "" then return end; pcall(function() writefile(configFolder .. "/" .. configNameBox.Text .. ".json", HttpService:JSONEncode(Settings)) end); RefreshConfigList() end)
+configBtnObj, configListObj = AddDrop(ConfTab, "Select Config", {}, function(selected) currentConfig = selected end)
+RefreshConfigList()
+AddBtn(ConfTab, "Load Selected Config", function()
+    if not currentConfig then return end
+    local data; pcall(function() data = readfile(configFolder .. "/" .. currentConfig .. ".json") end)
+    if data then
+        local decoded = HttpService:JSONDecode(data)
+        for k, v in pairs(decoded) do Settings[k] = v end
+        if UIElements["FOV"] then UIElements["FOV"].Set(Settings.FOV) end
+        if UIElements["Stretch"] then UIElements["Stretch"].Set(Settings.Stretch * 100) end
+        if UIElements["Time"] then UIElements["Time"].Set(Settings.Time) end
+        if UIElements["Bright"] then UIElements["Bright"].Set(Settings.Bright) end
+        if UIElements["FPSUnlock"] then UIElements["FPSUnlock"].Set(Settings.FPSUnlock) end
+        if UIElements["GuiTransparency"] then UIElements["GuiTransparency"].Set(Settings.GuiTransparency * 100) end
+        if Settings.Skybox then SetSky(Settings.Skybox) end
+    end
+end)
+AddBtn(ConfTab, "Delete Selected Config", function() if currentConfig then pcall(function() delfile(configFolder .. "/" .. currentConfig .. ".json") end); currentConfig = nil; configBtnObj.Text = "  Select Config ▼"; RefreshConfigList() end end)
+
+local StatsGui = Instance.new("ScreenGui")
+StatsGui.Name, StatsGui.ResetOnSpawn, StatsGui.Enabled, StatsGui.Parent = "NebesnyStatsGui", false, false, PlayerGui
+local StatFrame = Instance.new("Frame")
+StatFrame.Size, StatFrame.Position, StatFrame.BackgroundColor3 = UDim2.new(0, 130, 0, 46), UDim2.new(0, 20, 0, 20), Theme.Bg
+StatFrame.BackgroundTransparency, StatFrame.Parent = 0.2, StatsGui
+Instance.new("UICorner", StatFrame).CornerRadius = UDim.new(0, 8)
+Drag(StatFrame, StatFrame)
+
+local FpsLbl, PingLbl = Instance.new("TextLabel"), Instance.new("TextLabel")
+FpsLbl.Size, FpsLbl.BackgroundTransparency, FpsLbl.Text, FpsLbl.TextColor3 = UDim2.new(1, 0, 0.5, 0), 1, "FPS: 60", Theme.Accent
+FpsLbl.Font, FpsLbl.TextSize, FpsLbl.Parent = Enum.Font.GothamBold, 13, StatFrame
+PingLbl.Size, PingLbl.Position, PingLbl.BackgroundTransparency = UDim2.new(1, 0, 0.5, 0), UDim2.new(0, 0, 0.5, 0), 1
+PingLbl.Text, PingLbl.TextColor3, PingLbl.Font, PingLbl.TextSize, PingLbl.Parent = "Ping: 0 ms", Theme.Text, Enum.Font.GothamBold, 13, StatFrame
+
+local Frames, LastTime = 0, tick()
+RunService.RenderStepped:Connect(function() Frames = Frames + 1; if tick() - LastTime >= 1 then FpsLbl.Text = "FPS: " .. Frames; Frames = 0; LastTime = tick() end end)
+task.spawn(function() while task.wait(1) do pcall(function() PingLbl.Text = "Ping: " .. math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) .. " ms" end) end end)
+
+local StatsTab = CreateTab("Stats", "📊")
+AddSection(StatsTab, "UI")
+AddTgl(StatsTab, "Show FPS / Ping", false, function(s) StatsGui.Enabled = s end)
+
+Tabs["Visual"].Btn.BackgroundColor3 = Theme.Elem
+Tabs["Visual"].Btn.TextColor3 = Theme.Text
+Tabs["Visual"].Frame.Visible = true
+
+print("[Nebesny Visual] Скрипт успешно загружен! Все вкладки на месте.")
