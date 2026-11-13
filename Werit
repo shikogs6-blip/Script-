@@ -2,40 +2,47 @@ local Players, Lighting, UserInputService, RunService, Workspace = game:GetServi
 local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 if PlayerGui:FindFirstChild("NebesnyGui") then PlayerGui.NebesnyGui:Destroy() end
 
-local BgColor = Color3.fromRGB(18, 18, 22)
-local BtnColor = Color3.fromRGB(30, 30, 38)
-local Accent = Color3.fromRGB(80, 180, 120)
-local TextColor = Color3.fromRGB(240, 240, 245)
+local Theme = {Bg = Color3.fromRGB(18, 18, 22), Elem = Color3.fromRGB(30, 30, 38), Accent = Color3.fromRGB(80, 180, 120), Text = Color3.fromRGB(240, 240, 245), Sub = Color3.fromRGB(150, 150, 160)}
+local Settings = {FOV = 70, Stretch = 100, Time = 14}
 
 local Gui = Instance.new("ScreenGui")
 Gui.Name, Gui.ResetOnSpawn, Gui.Parent = "NebesnyGui", false, PlayerGui
 
 local Toggle = Instance.new("TextButton")
-Toggle.Size, Toggle.Position, Toggle.BackgroundColor3 = UDim2.new(0, 140, 0, 40), UDim2.new(0, 10, 0, 60), BgColor
-Toggle.Text, Toggle.TextColor3, Toggle.Font = "🌌 NEBESNY", TextColor, Enum.Font.GothamBold
+Toggle.Size, Toggle.Position, Toggle.BackgroundColor3 = UDim2.new(0, 140, 0, 40), UDim2.new(0, 10, 0, 60), Theme.Bg
+Toggle.Text, Toggle.TextColor3, Toggle.Font = "🌌 NEBESNY", Theme.Text, Enum.Font.GothamBold
 Toggle.Parent = Gui
 Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 6)
 
 local Main = Instance.new("Frame")
-Main.Size, Main.Position, Main.BackgroundColor3 = UDim2.new(0, 280, 0, 320), UDim2.new(0.5, -140, 0.5, -160), BgColor
+Main.Size, Main.Position, Main.BackgroundColor3 = UDim2.new(0, 280, 0, 400), UDim2.new(0.5, -140, 0.5, -200), Theme.Bg
 Main.Visible, Main.Active = false, true
 Main.Parent = Gui
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(50, 50, 60)
 
 local Header = Instance.new("Frame")
-Header.Size, Header.BackgroundColor3 = UDim2.new(1, 0, 0, 35), BtnColor
+Header.Size, Header.BackgroundColor3 = UDim2.new(1, 0, 0, 35), Theme.Elem
 Header.Parent = Main
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 8)
 local Title = Instance.new("TextLabel")
 Title.Size, Title.Position, Title.BackgroundTransparency = UDim2.new(1, -40, 1, 0), UDim2.new(0, 10, 0, 0), 1
-Title.Text, Title.TextColor3, Title.Font, Title.TextSize, Title.TextXAlignment = "Nebesny Visual", TextColor, Enum.Font.GothamBold, 14, Enum.TextXAlignment.Left
+Title.Text, Title.TextColor3, Title.Font, Title.TextSize, Title.TextXAlignment = "Nebesny Visual", Theme.Text, Enum.Font.GothamBold, 14, Enum.TextXAlignment.Left
 Title.Parent = Header
 local Close = Instance.new("TextButton")
 Close.Size, Close.Position, Close.BackgroundColor3, Close.Text = UDim2.new(0, 25, 0, 25), UDim2.new(1, -30, 0, 5), Color3.fromRGB(60, 30, 30), "X"
 Close.TextColor3, Close.Font = Color3.fromRGB(255, 100, 100), Enum.Font.GothamBold
 Close.Parent = Header
 
--- Перетаскивание
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size, Scroll.Position, Scroll.BackgroundTransparency = UDim2.new(1, -10, 1, -45), UDim2.new(0, 5, 0, 40), 1
+Scroll.BorderSizePixel, Scroll.ScrollBarThickness, Scroll.CanvasSize = 0, 3, UDim2.new(0, 0, 0, 0)
+Scroll.Parent = Main
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 5); Layout.Parent = Scroll
+Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() Scroll.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 10) end)
+
+-- Перетаскивание окна
 local drag, start, pos = false, nil, nil
 Header.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = true; start = i.Position; pos = Main.Position end end)
 UserInputService.InputChanged:Connect(function(i) if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local d = i.Position - start; Main.Position = UDim2.new(pos.X.Scale, pos.X.Offset + d.X, pos.Y.Scale, pos.Y.Offset + d.Y) end end)
@@ -44,97 +51,120 @@ UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserI
 Toggle.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Main.Visible = not Main.Visible end end)
 Close.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Main.Visible = false end end)
 
--- ХЕЛПЕРЫ (Абсолютное позиционирование)
-local yPos = 45
+-- ХЕЛПЕРЫ
+local function AddLbl(text)
+    local L = Instance.new("TextLabel")
+    L.Size, L.BackgroundTransparency, L.Text = UDim2.new(1, 0, 0, 18), 1, text
+    L.TextColor3, L.Font, L.TextSize, L.TextXAlignment = Theme.Sub, Enum.Font.GothamBold, 11, Enum.TextXAlignment.Left
+    L.Parent = Scroll
+end
 
 local function AddBtn(text, callback)
-    local Btn = Instance.new("TextButton")
-    Btn.Size, Btn.Position, Btn.BackgroundColor3 = UDim2.new(1, -20, 0, 30), UDim2.new(0, 10, 0, yPos), BtnColor
-    Btn.Text, Btn.TextColor3, Btn.Font, Btn.TextSize = text, TextColor, Enum.Font.Gotham, 12
-    Btn.Parent = Main
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-    Btn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then pcall(callback) end end)
-    yPos = yPos + 35
+    local B = Instance.new("TextButton")
+    B.Size, B.BackgroundColor3, B.Text, B.TextColor3 = UDim2.new(1, 0, 0, 30), Theme.Elem, text, Theme.Text
+    B.Font, B.TextSize = Enum.Font.Gotham, 12
+    B.Parent = Scroll
+    Instance.new("UICorner", B).CornerRadius = UDim.new(0, 6)
+    B.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then pcall(callback) end end)
 end
 
 local function AddSld(text, min, max, default, callback)
-    local Frame = Instance.new("Frame")
-    Frame.Size, Frame.Position, Frame.BackgroundColor3 = UDim2.new(1, -20, 0, 40), UDim2.new(0, 10, 0, yPos), BtnColor
-    Frame.Parent = Main
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
-    
-    local Lbl = Instance.new("TextLabel")
-    Lbl.Size, Lbl.Position, Lbl.BackgroundTransparency = UDim2.new(1, -10, 0, 20), UDim2.new(0, 5, 0, 2), 1
-    Lbl.Text, Lbl.TextColor3, Lbl.Font, Lbl.TextSize, Lbl.TextXAlignment = text .. ": " .. default, TextColor, Enum.Font.Gotham, 12, Enum.TextXAlignment.Left
-    Lbl.Parent = Frame
-    
+    local F = Instance.new("Frame")
+    F.Size, F.BackgroundColor3 = UDim2.new(1, 0, 0, 40), Theme.Elem
+    F.Parent = Scroll
+    Instance.new("UICorner", F).CornerRadius = UDim.new(0, 6)
+    local L = Instance.new("TextLabel")
+    L.Size, L.Position, L.BackgroundTransparency = UDim2.new(1, -10, 0, 18), UDim2.new(0, 10, 0, 2), 1
+    L.Text, L.TextColor3, L.Font, L.TextSize, L.TextXAlignment = text .. ": " .. default, Theme.Text, Enum.Font.Gotham, 12, Enum.TextXAlignment.Left
+    L.Parent = F
     local Bar = Instance.new("Frame")
     Bar.Size, Bar.Position, Bar.BackgroundColor3 = UDim2.new(1, -20, 0, 4), UDim2.new(0, 10, 0, 28), Color3.fromRGB(50, 50, 60)
-    Bar.Parent = Frame
+    Bar.Parent = F
     Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
-    
     local Fill = Instance.new("Frame")
-    Fill.Size, Fill.BackgroundColor3 = UDim2.new((default - min) / (max - min), 0, 1, 0), Accent
+    Fill.Size, Fill.BackgroundColor3 = UDim2.new((default - min) / (max - min), 0, 1, 0), Theme.Accent
     Fill.Parent = Bar
-    
     local Drag = false
     local function Update(input)
         if Bar.AbsoluteSize.X <= 0 then return end
         local pct = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
         local val = math.floor(min + (max - min) * pct)
         Fill.Size = UDim2.new(pct, 0, 1, 0)
-        Lbl.Text = text .. ": " .. val
+        L.Text = text .. ": " .. val
         pcall(function() callback(val) end)
     end
-    
     Bar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Drag = true; Update(i) end end)
     UserInputService.InputChanged:Connect(function(i) if Drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then Update(i) end end)
     UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Drag = false end end)
-    
-    yPos = yPos + 45
 end
 
 -- ФУНКЦИИ
-AddSld("FOV", 50, 120, 70, function(v) if Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = v end end)
+local function ApplyFOV() if Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = Settings.FOV * (Settings.Stretch / 100) end end
+
+local function SetSky(id)
+    local s = Lighting:FindFirstChild("Sky") or Instance.new("Sky", Lighting)
+    if type(id) == "table" then
+        s.SkyboxBk, s.SkyboxDn, s.SkyboxFt, s.SkyboxLf, s.SkyboxRt, s.SkyboxUp = id[1], id[2], id[3], id[4], id[5], id[6]
+    else
+        s.SkyboxBk, s.SkyboxDn, s.SkyboxFt, s.SkyboxLf, s.SkyboxRt, s.SkyboxUp = id, id, id, id, id, id
+    end
+end
+
+local function WaterAction(action, color)
+    local t = Workspace:FindFirstChildOfClass("Terrain")
+    if t then
+        if action == "remove" then t.WaterTransparency = 1; t.WaterWaveSize = 0
+        elseif action == "restore" then t.WaterTransparency = 0.3; t.WaterWaveSize = 0.15
+        elseif action == "color" then t.WaterColor = color; t.WaterTransparency = 0.3 end
+    end
+end
+
+-- ЗАПОЛНЕНИЕ МЕНЮ
+AddLbl("Camera & Stretch")
+AddSld("FOV", 50, 120, 70, function(v) Settings.FOV = v; ApplyFOV() end)
+AddSld("Stretch Screen (%)", 100, 150, 100, function(v) Settings.Stretch = v; ApplyFOV() end)
 AddSld("Time of Day", 0, 24, 14, function(v) Lighting.ClockTime = v end)
 
-AddBtn("Skybox: Sunset", function() 
-    local s = Lighting:FindFirstChild("Sky") or Instance.new("Sky", Lighting)
-    s.SkyboxBk = "rbxassetid://600830446"; s.SkyboxDn = "rbxassetid://600831635"; s.SkyboxFt = "rbxassetid://600832720"
-    s.SkyboxLf = "rbxassetid://600886090"; s.SkyboxRt = "rbxassetid://600833862"; s.SkyboxUp = "rbxassetid://600835177"
-end)
+AddLbl("Skyboxes")
+AddBtn("Galaxy", function() SetSky({15983968922, 15983966825, 15983965025, 15983967420, 15983966246, 15983964246}) end)
+AddBtn("Sunset", function() SetSky({600830446, 600831635, 600832720, 600886090, 600833862, 600835177}) end)
+AddBtn("Black Storm", function() SetSky({15502511288, 15502508460, 15502510289, 15502507918, 15502509398, 15502511911}) end)
+AddBtn("Roblox Default", function() local s = Lighting:FindFirstChildOfClass("Sky"); if s then s:Destroy() end end)
 
-AddBtn("Skybox: Galaxy", function() 
-    local s = Lighting:FindFirstChild("Sky") or Instance.new("Sky", Lighting)
-    s.SkyboxBk = "rbxassetid://15983968922"; s.SkyboxDn = "rbxassetid://15983966825"; s.SkyboxFt = "rbxassetid://15983965025"
-    s.SkyboxLf = "rbxassetid://15983967420"; s.SkyboxRt = "rbxassetid://15983966246"; s.SkyboxUp = "rbxassetid://15983964246"
-end)
-
-AddBtn("Bright / No Shadows", function()
-    Lighting.Brightness = 3
-    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    Lighting.GlobalShadows = false
-end)
-
-AddBtn("Remove Water", function()
+AddLbl("Water")
+AddBtn("Blue Water", function() WaterAction("color", Color3.fromRGB(12, 84, 92)) end)
+AddBtn("Red Water", function() WaterAction("color", Color3.fromRGB(150, 30, 30)) end)
+AddBtn("Remove / Restore Water", function()
     local t = Workspace:FindFirstChildOfClass("Terrain")
-    if t then t.WaterTransparency = 1; t.WaterWaveSize = 0 end
+    if t and t.WaterTransparency == 1 then WaterAction("restore") else WaterAction("remove") end
 end)
 
-AddBtn("Unlock Max FPS", function()
-    pcall(function() if setfpscap then setfpscap(0) end end)
+AddLbl("Optimization")
+AddBtn("Toggle Shadows / Brightness", function()
+    if Lighting.GlobalShadows then
+        Lighting.GlobalShadows = false; Lighting.Brightness = 3; Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    else
+        Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+    end
+end)
+AddBtn("Unlock Max FPS", function() pcall(function() if setfpscap then setfpscap(0) end end) end)
+
+AddLbl("Stats")
+local statsOn = false
+local StatsGui = Instance.new("ScreenGui", PlayerGui)
+StatsGui.Name, StatsGui.Enabled = "NebesnyStats", false
+local Fps, Ping = Instance.new("TextLabel", StatsGui), Instance.new("TextLabel", StatsGui)
+Fps.Size, Fps.Position, Fps.TextColor3, Fps.BackgroundTransparency = UDim2.new(0, 100, 0, 20), UDim2.new(0, 10, 0, 40), Theme.Accent, 1
+Ping.Size, Ping.Position, Ping.TextColor3, Ping.BackgroundTransparency = UDim2.new(0, 100, 0, 20), UDim2.new(0, 10, 0, 60), Theme.Text, 1
+Fps.Text, Ping.Text, Fps.Font, Ping.Font = "FPS: 60", "Ping: 0", Enum.Font.GothamBold, Enum.Font.GothamBold
+
+AddBtn("Toggle Stats (FPS/Ping)", function()
+    statsOn = not statsOn; StatsGui.Enabled = statsOn
 end)
 
-AddBtn("Show FPS / Ping", function()
-    local StatsGui = Instance.new("ScreenGui", PlayerGui)
-    StatsGui.Name = "NebesnyStats"
-    local Fps, Ping = Instance.new("TextLabel", StatsGui), Instance.new("TextLabel", StatsGui)
-    Fps.Size, Fps.Position, Fps.TextColor3, Fps.BackgroundTransparency = UDim2.new(0, 100, 0, 20), UDim2.new(0, 10, 0, 40), Accent, 1
-    Ping.Size, Ping.Position, Ping.TextColor3, Ping.BackgroundTransparency = UDim2.new(0, 100, 0, 20), UDim2.new(0, 10, 0, 60), TextColor, 1
-    Fps.Text, Ping.Text, Fps.Font, Ping.Font = "FPS: 60", "Ping: 0", Enum.Font.GothamBold, Enum.Font.GothamBold
-    Fps.Parent, Ping.Parent = StatsGui, StatsGui
-    local f, l = 0, tick()
-    RunService.RenderStepped:Connect(function() f = f + 1; if tick() - l >= 1 then Fps.Text = "FPS: " .. f; f = 0; l = tick() end end)
-    task.spawn(function() while task.wait(1) do pcall(function() Ping.Text = "Ping: " .. math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) end) end end)
+local f, l = 0, tick()
+RunService.RenderStepped:Connect(function()
+    f = f + 1
+    if tick() - l >= 1 then Fps.Text = "FPS: " .. f; f = 0; l = tick() end
 end)
+task.spawn(function() while task.wait(1) do pcall(function() Ping.Text = "Ping: " .. math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) end) end end)
