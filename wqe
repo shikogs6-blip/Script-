@@ -1,8 +1,6 @@
-local Players, Lighting, UserInputService, RunService, TweenService, Workspace, HttpService = game:GetService("Players"), game:GetService("Lighting"), game:GetService("UserInputService"), game:GetService("RunService"), game:GetService("TweenService"), workspace, game:GetService("HttpService")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Players, Lighting, UserInputService, RunService, Workspace, HttpService = game:GetService("Players"), game:GetService("Lighting"), game:GetService("UserInputService"), game:GetService("RunService"), workspace, game:GetService("HttpService")
+local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 if PlayerGui:FindFirstChild("NebesnyGui") then PlayerGui.NebesnyGui:Destroy() end
-if PlayerGui:FindFirstChild("NebesnyStatsGui") then PlayerGui.NebesnyStatsGui:Destroy() end
 
 local Theme = {Bg = Color3.fromRGB(18, 18, 22), Side = Color3.fromRGB(14, 14, 18), Elem = Color3.fromRGB(28, 28, 35), Accent = Color3.fromRGB(80, 180, 120), Text = Color3.fromRGB(240, 240, 245), Sub = Color3.fromRGB(150, 150, 160)}
 local Settings = {FOV = 70, Time = 14, Skybox = "Roblox Default", Bright = false, FPSUnlock = false, GuiTransparency = 0, Stretch = 1}
@@ -126,7 +124,6 @@ local function AddTgl(parent, text, default, callback)
     Btn.Set = function(val) State = val; UpdateVisual(); pcall(function() callback(State) end) end
     return Btn
 end
-
 local function AddSld(parent, text, min, max, default, callback)
     local Frame = Instance.new("Frame")
     Frame.Size, Frame.BackgroundColor3, Frame.ZIndex = UDim2.new(1, -10, 0, 44), Theme.Elem, 53
@@ -199,24 +196,9 @@ local function Drag(Part, Target)
     UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Drg = false end end)
 end
 Drag(TopBar, Window)
-local configFolder = "NebesnyConfigs"
-pcall(function() if not isfolder(configFolder) then makefolder(configFolder) end end)
-local currentConfig, configListObj, configBtnObj, configNameBox = nil, nil, nil, nil
 
-local function RefreshConfigList()
-    if not configListObj then return end
-    for _, child in ipairs(configListObj:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
-    local files = {}; pcall(function() files = listfiles(configFolder) end)
-    for _, file in ipairs(files) do
-        local name = file:gsub(configFolder .. "\\", ""):gsub(configFolder .. "/", ""):gsub(".json", "")
-        if name ~= "" then
-            local OptBtn = Instance.new("TextButton")
-            OptBtn.Size, OptBtn.BackgroundColor3, OptBtn.Text, OptBtn.TextColor3 = UDim2.new(1, 0, 0, 24), Theme.Side, "  " .. name, Theme.Sub
-            OptBtn.Font, OptBtn.TextSize, OptBtn.ZIndex = Enum.Font.Gotham, 12, 61
-            OptBtn.Parent = configListObj
-            OptBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then configBtnObj.Text = "  Selected: " .. name .. " ▼"; currentConfig = name; configListObj.Visible = false end end)
-        end
-    end
+local function ApplyVisualStretch()
+    if Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = Settings.FOV * Settings.Stretch end
 end
 
 local Skies = {
@@ -267,16 +249,10 @@ local function ToggleOptimize(state)
         Lighting.FogEnd, Lighting.GlobalShadows = 100000, true
     end
 end
-
-local function ApplyVisualStretch()
-    if Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = Settings.FOV * Settings.Stretch end
-end
-
 local VisualTab = CreateTab("Visual", "👁️")
 AddSection(VisualTab, "Camera")
 UIElements["FOV"] = AddSld(VisualTab, "Field of view", 50, 120, 70, function(v) Settings.FOV = v; ApplyVisualStretch() end)
 UIElements["Stretch"] = AddSld(VisualTab, "Visual stretch (%)", 100, 150, 100, function(v) Settings.Stretch = v / 100; ApplyVisualStretch() end)
-
 AddSection(VisualTab, "Time")
 UIElements["Time"] = AddSld(VisualTab, "Time of day", 0, 24, 14, function(v) Settings.Time = v; Lighting.ClockTime = v end)
 AddSection(VisualTab, "Skybox")
@@ -305,6 +281,26 @@ AddBtn(SetTab, "Theme: Green (Default)", function() Theme.Accent = Color3.fromRG
 AddBtn(SetTab, "Theme: Red", function() Theme.Accent = Color3.fromRGB(200, 50, 50); ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 15, 15) end)
 AddBtn(SetTab, "Theme: Blue", function() Theme.Accent = Color3.fromRGB(50, 100, 200); ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 20, 30) end)
 
+local configFolder = "NebesnyConfigs"
+pcall(function() if not isfolder(configFolder) then makefolder(configFolder) end end)
+local currentConfig, configListObj, configBtnObj, configNameBox = nil, nil, nil, nil
+
+local function RefreshConfigList()
+    if not configListObj then return end
+    for _, child in ipairs(configListObj:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    local files = {}; pcall(function() files = listfiles(configFolder) end)
+    for _, file in ipairs(files) do
+        local name = file:gsub(configFolder .. "\\", ""):gsub(configFolder .. "/", ""):gsub(".json", "")
+        if name ~= "" then
+            local OptBtn = Instance.new("TextButton")
+            OptBtn.Size, OptBtn.BackgroundColor3, OptBtn.Text, OptBtn.TextColor3 = UDim2.new(1, 0, 0, 24), Theme.Side, "  " .. name, Theme.Sub
+            OptBtn.Font, OptBtn.TextSize, OptBtn.ZIndex = Enum.Font.Gotham, 12, 61
+            OptBtn.Parent = configListObj
+            OptBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then configBtnObj.Text = "  Selected: " .. name .. " ▼"; currentConfig = name; configListObj.Visible = false end end)
+        end
+    end
+end
+
 local ConfTab = CreateTab("Configs", "💾")
 AddSection(ConfTab, "Manage Configs")
 configNameBox = Instance.new("TextBox")
@@ -332,6 +328,8 @@ AddBtn(ConfTab, "Load Selected Config", function()
 end)
 AddBtn(ConfTab, "Delete Selected Config", function() if currentConfig then pcall(function() delfile(configFolder .. "/" .. currentConfig .. ".json") end); currentConfig = nil; configBtnObj.Text = "  Select Config ▼"; RefreshConfigList() end end)
 
+local StatsTab = CreateTab("Stats", "📊")
+AddSection(StatsTab, "UI")
 local StatsGui = Instance.new("ScreenGui")
 StatsGui.Name, StatsGui.ResetOnSpawn, StatsGui.Enabled, StatsGui.Parent = "NebesnyStatsGui", false, false, PlayerGui
 local StatFrame = Instance.new("Frame")
@@ -339,23 +337,17 @@ StatFrame.Size, StatFrame.Position, StatFrame.BackgroundColor3 = UDim2.new(0, 13
 StatFrame.BackgroundTransparency, StatFrame.Parent = 0.2, StatsGui
 Instance.new("UICorner", StatFrame).CornerRadius = UDim.new(0, 8)
 Drag(StatFrame, StatFrame)
-
 local FpsLbl, PingLbl = Instance.new("TextLabel"), Instance.new("TextLabel")
 FpsLbl.Size, FpsLbl.BackgroundTransparency, FpsLbl.Text, FpsLbl.TextColor3 = UDim2.new(1, 0, 0.5, 0), 1, "FPS: 60", Theme.Accent
 FpsLbl.Font, FpsLbl.TextSize, FpsLbl.Parent = Enum.Font.GothamBold, 13, StatFrame
 PingLbl.Size, PingLbl.Position, PingLbl.BackgroundTransparency = UDim2.new(1, 0, 0.5, 0), UDim2.new(0, 0, 0.5, 0), 1
 PingLbl.Text, PingLbl.TextColor3, PingLbl.Font, PingLbl.TextSize, PingLbl.Parent = "Ping: 0 ms", Theme.Text, Enum.Font.GothamBold, 13, StatFrame
-
 local Frames, LastTime = 0, tick()
 RunService.RenderStepped:Connect(function() Frames = Frames + 1; if tick() - LastTime >= 1 then FpsLbl.Text = "FPS: " .. Frames; Frames = 0; LastTime = tick() end end)
 task.spawn(function() while task.wait(1) do pcall(function() PingLbl.Text = "Ping: " .. math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) .. " ms" end) end end)
-
-local StatsTab = CreateTab("Stats", "📊")
-AddSection(StatsTab, "UI")
 AddTgl(StatsTab, "Show FPS / Ping", false, function(s) StatsGui.Enabled = s end)
 
 Tabs["Visual"].Btn.BackgroundColor3 = Theme.Elem
 Tabs["Visual"].Btn.TextColor3 = Theme.Text
 Tabs["Visual"].Frame.Visible = true
-
-print("[Nebesny Visual] Скрипт успешно загружен! Все вкладки на месте.")
+print("[Nebesny Visual] Скрипт успешно загружен!")
