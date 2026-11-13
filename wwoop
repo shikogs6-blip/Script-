@@ -1,0 +1,564 @@
+--==================================================================
+--  NEBESNY VISUAL (ЧАСТЬ 1) - Интерфейс
+--==================================================================
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+if PlayerGui:FindFirstChild("NebesnyGui") then PlayerGui.NebesnyGui:Destroy() end
+if PlayerGui:FindFirstChild("NebesnyStatsGui") then PlayerGui.NebesnyStatsGui:Destroy() end
+
+local Theme = {
+    Bg = Color3.fromRGB(18, 18, 22),
+    Side = Color3.fromRGB(14, 14, 18),
+    Elem = Color3.fromRGB(28, 28, 35),
+    ElemHover = Color3.fromRGB(38, 38, 48),
+    Accent = Color3.fromRGB(80, 180, 120),
+    Text = Color3.fromRGB(240, 240, 245),
+    Sub = Color3.fromRGB(150, 150, 160)
+}
+
+local MainGui = Instance.new("ScreenGui")
+MainGui.Name = "NebesnyGui"
+MainGui.ResetOnSpawn = false
+MainGui.DisplayOrder = 999
+MainGui.Parent = PlayerGui
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 150, 0, 40)
+ToggleBtn.Position = UDim2.new(0, 20, 0, 80)
+ToggleBtn.BackgroundColor3 = Theme.Bg
+ToggleBtn.Text = "🌌 NEBESNY VISUAL"
+ToggleBtn.TextColor3 = Theme.Text
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 13
+ToggleBtn.Parent = MainGui
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+
+local Window = Instance.new("Frame")
+Window.Size = UDim2.new(0, 580, 0, 360)
+Window.Position = UDim2.new(0.5, -290, 0.5, -180)
+Window.BackgroundColor3 = Theme.Bg
+Window.Visible = false
+Window.Active = true
+Window.Parent = MainGui
+Instance.new("UICorner", Window).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", Window).Color = Color3.fromRGB(50, 50, 60)
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundTransparency = 1
+TopBar.Active = true
+TopBar.ZIndex = 5
+TopBar.Parent = Window
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 20, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Nebesny Visual"
+Title.TextColor3 = Theme.Text
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -38, 0, 6)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TopBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 130, 1, -50)
+Sidebar.Position = UDim2.new(0, 5, 0, 45)
+Sidebar.BackgroundColor3 = Theme.Side
+Sidebar.Parent = Window
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
+local SideLayout = Instance.new("UIListLayout")
+SideLayout.Padding = UDim.new(0, 4)
+SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SideLayout.Parent = Sidebar
+
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -145, 1, -50)
+Content.Position = UDim2.new(0, 140, 0, 45)
+Content.BackgroundTransparency = 1
+Content.ZIndex = 2
+Content.Parent = Window
+
+local Tabs = {}
+local ActiveTab = nil
+
+local function CreateTab(name, icon)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -10, 0, 34)
+    Btn.BackgroundColor3 = Theme.Side
+    Btn.Text = "  " .. icon .. "  " .. name
+    Btn.TextColor3 = Theme.Sub
+    Btn.Font = Enum.Font.GothamSemibold
+    Btn.TextSize = 13
+    Btn.TextXAlignment = Enum.TextXAlignment.Left
+    Btn.AutoButtonColor = false
+    Btn.Parent = Sidebar
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+
+    local Frame = Instance.new("ScrollingFrame")
+    Frame.Size = UDim2.new(1, 0, 1, 0)
+    Frame.BackgroundTransparency = 1
+    Frame.BorderSizePixel = 0
+    Frame.ScrollBarThickness = 3
+    Frame.Visible = false
+    Frame.ZIndex = 2
+    Frame.Parent = Content
+
+    local Layout = Instance.new("UIListLayout")
+    Layout.Padding = UDim.new(0, 6)
+    Layout.Parent = Frame
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        Frame.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 20)
+    end)
+
+    Tabs[name] = { Btn = Btn, Frame = Frame }
+
+    Btn.MouseButton1Click:Connect(function()
+        for _, t in pairs(Tabs) do
+            t.Btn.BackgroundColor3 = Theme.Side
+            t.Btn.TextColor3 = Theme.Sub
+            t.Frame.Visible = false
+        end
+        Btn.BackgroundColor3 = Theme.Elem
+        Btn.TextColor3 = Theme.Text
+        Frame.Visible = true
+        ActiveTab = name
+    end)
+    return Frame, Btn
+end
+
+local function AddSection(parent, text)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -10, 0, 20)
+    Frame.BackgroundTransparency = 1
+    Frame.Parent = parent
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Theme.Text
+    Label.Font = Enum.Font.GothamBold
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Frame
+end
+
+local function AddBtn(parent, text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -10, 0, 30)
+    Btn.BackgroundColor3 = Theme.Elem
+    Btn.Text = text
+    Btn.TextColor3 = Theme.Text
+    Btn.Font = Enum.Font.Gotham
+    Btn.TextSize = 12
+    Btn.AutoButtonColor = false
+    Btn.ZIndex = 3
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Btn.MouseButton1Click:Connect(function() pcall(callback) end)
+    return Btn
+end
+
+local function AddTgl(parent, text, default, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -10, 0, 34)
+    Btn.BackgroundColor3 = Theme.Elem
+    Btn.Text = ""
+    Btn.AutoButtonColor = false
+    Btn.ZIndex = 3
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -60, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Theme.Text
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.ZIndex = 4
+    Label.Parent = Btn
+    
+    local Track = Instance.new("Frame")
+    Track.Size = UDim2.new(0, 34, 0, 18)
+    Track.Position = UDim2.new(1, -44, 0.5, -9)
+    Track.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    Track.ZIndex = 4
+    Track.Parent = Btn
+    Instance.new("UICorner", Track).CornerRadius = UDim.new(1, 0)
+    
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0, 14, 0, 14)
+    Knob.Position = UDim2.new(0, 2, 0.5, -7)
+    Knob.BackgroundColor3 = Theme.Text
+    Knob.ZIndex = 4
+    Knob.Parent = Track
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    
+    local State = default or false
+    local function UpdateVisual()
+        if State then
+            TweenService:Create(Track, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Accent}):Play()
+            TweenService:Create(Knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -16, 0.5, -7)}):Play()
+        else
+            TweenService:Create(Track, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}):Play()
+            TweenService:Create(Knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -7)}):Play()
+        end
+    end
+    if State then UpdateVisual() end
+    
+    Btn.MouseButton1Click:Connect(function()
+        State = not State
+        UpdateVisual()
+        pcall(function() callback(State) end)
+    end)
+end
+
+local function AddSld(parent, text, min, max, default, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -10, 0, 44)
+    Frame.BackgroundColor3 = Theme.Elem
+    Frame.ZIndex = 3
+    Frame.Parent = parent
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -20, 0, 18)
+    Label.Position = UDim2.new(0, 10, 0, 4)
+    Label.BackgroundTransparency = 1
+    Label.Text = text .. ": " .. tostring(default)
+    Label.TextColor3 = Theme.Text
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.ZIndex = 4
+    Label.Parent = Frame
+    
+    local Bar = Instance.new("Frame")
+    Bar.Size = UDim2.new(1, -20, 0, 4)
+    Bar.Position = UDim2.new(0, 10, 0, 28)
+    Bar.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    Bar.ZIndex = 4
+    Bar.Parent = Frame
+    Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
+    
+    local Fill = Instance.new("Frame")
+    Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    Fill.BackgroundColor3 = Theme.Accent
+    Fill.Parent = Bar
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+    
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0, 10, 0, 10)
+    Knob.Position = UDim2.new((default - min) / (max - min), -5, 0.5, -5)
+    Knob.BackgroundColor3 = Theme.Text
+    Knob.Parent = Bar
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    
+    local Dragging = false
+    local function Update(input)
+        if Bar.AbsoluteSize.X <= 0 then return end
+        local relX = math.clamp(input.Position.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
+        local percent = relX / Bar.AbsoluteSize.X
+        local value = math.floor(min + (max - min) * percent)
+        Fill.Size = UDim2.new(percent, 0, 1, 0)
+        Knob.Position = UDim2.new(percent, -5, 0.5, -5)
+        Label.Text = text .. ": " .. tostring(value)
+        pcall(function() callback(value) end)
+    end
+    
+    Bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = true
+            Update(input)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            Update(input)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then Dragging = false end
+    end)
+end
+
+local function AddDrop(parent, text, options, callback)
+    local MainBtn = Instance.new("TextButton")
+    MainBtn.Size = UDim2.new(1, -10, 0, 32)
+    MainBtn.BackgroundColor3 = Theme.Elem
+    MainBtn.Text = "  " .. text .. " ▼"
+    MainBtn.TextColor3 = Theme.Text
+    MainBtn.Font = Enum.Font.Gotham
+    MainBtn.TextSize = 12
+    MainBtn.TextXAlignment = Enum.TextXAlignment.Left
+    MainBtn.AutoButtonColor = false
+    MainBtn.ZIndex = 3
+    MainBtn.Parent = parent
+    Instance.new("UICorner", MainBtn).CornerRadius = UDim.new(0, 6)
+    
+    local List = Instance.new("ScrollingFrame")
+    List.Size = UDim2.new(1, -10, 0, 0)
+    List.BackgroundColor3 = Theme.Side
+    List.BorderSizePixel = 0
+    List.ScrollBarThickness = 3
+    List.Visible = false
+    List.ZIndex = 10
+    List.Parent = parent
+    Instance.new("UICorner", List).CornerRadius = UDim.new(0, 6)
+    
+    local Layout = Instance.new("UIListLayout")
+    Layout.Padding = UDim.new(0, 2)
+    Layout.Parent = List
+    
+    local isOpen = false
+    MainBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        List.Visible = isOpen
+        MainBtn.Text = "  " .. text .. (isOpen and " ▲" or " ▼")
+        if isOpen then
+            List.Size = UDim2.new(1, -10, 0, math.min(#options * 26, 120))
+            List.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 4)
+        end
+    end)
+    
+    for _, opt in ipairs(options) do
+        local OptBtn = Instance.new("TextButton")
+        OptBtn.Size = UDim2.new(1, 0, 0, 24)
+        OptBtn.BackgroundColor3 = Theme.Side
+        OptBtn.Text = "  " .. opt
+        OptBtn.TextColor3 = Theme.Sub
+        OptBtn.Font = Enum.Font.Gotham
+        OptBtn.TextSize = 12
+        OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+        OptBtn.AutoButtonColor = false
+        OptBtn.ZIndex = 11
+        OptBtn.Parent = List
+        OptBtn.MouseButton1Click:Connect(function()
+            MainBtn.Text = "  " .. text .. ": " .. opt .. " ▼"
+            isOpen = false
+            List.Visible = false
+            pcall(function() callback(opt) end)
+        end)
+    end
+end
+
+local function Drag(Part, Target)
+    local Drg, Start, StartPos = false, nil, nil
+    Part.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            Drg = true; Start = i.Position; StartPos = Target.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if Drg and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local d = i.Position - Start
+            Target.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + d.X, StartPos.Y.Scale, StartPos.Y.Offset + d.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Drg = false end
+    end)
+end
+Drag(TopBar, Window)
+--==================================================================
+--  NEBESNY VISUAL (ЧАСТЬ 2) - Логика и Растяжение
+--==================================================================
+
+-- РАБОЧЕЕ РАСТЯЖЕНИЕ ЭКРАНА (Stretch)
+local stretchEnabled = false
+local stretchAmount = 0.8 -- 0.8 = сплюснуто по вертикали, 1.2 = растянуто
+
+local function UpdateStretch()
+    if stretchEnabled then
+        RunService:BindToRenderStep("NebesnyStretch", Enum.RenderPriority.Camera.Value + 1, function()
+            local cam = Workspace.CurrentCamera
+            if cam then
+                -- Матрица растяжения (изменяем масштаб по оси Y)
+                cam.CFrame = cam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, stretchAmount, 0, 0, 0, 1)
+            end
+        end)
+    else
+        pcall(function() RunService:UnbindFromRenderStep("NebesnyStretch") end)
+    end
+end
+
+local function ToggleStretch(state)
+    stretchEnabled = state
+    UpdateStretch()
+end
+
+local function SetStretchAmount(value)
+    stretchAmount = value / 100
+    if stretchEnabled then
+        UpdateStretch()
+    end
+end
+
+-- Данные Скайбоксов
+local Skies = {
+    ["HD"] = { Bk = "http://www.roblox.com/asset/?id=16553658937", Dn = "http://www.roblox.com/asset/?id=16553660713", Ft = "http://www.roblox.com/asset/?id=16553662144", Lf = "http://www.roblox.com/asset/?id=16553664042", Rt = "http://www.roblox.com/asset/?id=16553665766", Up = "http://www.roblox.com/asset/?id=16553667750" },
+    ["Black Storm"] = { Bk = "rbxassetid://15502511288", Dn = "rbxassetid://15502508460", Ft = "rbxassetid://15502510289", Lf = "rbxassetid://15502507918", Rt = "rbxassetid://15502509398", Up = "rbxassetid://15502511911" },
+    ["Snow"] = { Bk = "http://www.roblox.com/asset/?id=155657655", Dn = "http://www.roblox.com/asset/?id=155674246", Ft = "http://www.roblox.com/asset/?id=155657609", Lf = "http://www.roblox.com/asset/?id=155657671", Rt = "http://www.roblox.com/asset/?id=155657619", Up = "http://www.roblox.com/asset/?id=155674931" },
+    ["Blue Space"] = { Bk = "rbxassetid://15536110634", Dn = "rbxassetid://15536112543", Ft = "rbxassetid://15536116141", Lf = "rbxassetid://15536114370", Rt = "rbxassetid://15536118762", Up = "rbxassetid://15536117282" },
+    ["Sunset"] = { Bk = "rbxassetid://600830446", Dn = "rbxassetid://600831635", Ft = "rbxassetid://600832720", Lf = "rbxassetid://600886090", Rt = "rbxassetid://600833862", Up = "rbxassetid://600835177" },
+    ["Galaxy"] = { Bk = "rbxassetid://15983968922", Dn = "rbxassetid://15983966825", Ft = "rbxassetid://15983965025", Lf = "rbxassetid://15983967420", Rt = "rbxassetid://15983966246", Up = "rbxassetid://15983964246" },
+    ["Roblox Default"] = { Bk = "rbxasset://textures/sky/sky512_bk.tex", Dn = "rbxasset://textures/sky/sky512_dn.tex", Ft = "rbxasset://textures/sky/sky512_ft.tex", Lf = "rbxasset://textures/sky/sky512_lf.tex", Rt = "rbxasset://textures/sky/sky512_rt.tex", Up = "rbxasset://textures/sky/sky512_up.tex" }
+}
+
+-- Логика Неба
+local function SetSky(name)
+    local d = Skies[name]
+    if not d then return end
+    local s = Lighting:FindFirstChild("Nebesny_Sky") or Instance.new("Sky", Lighting)
+    s.Name = "Nebesny_Sky"
+    s.SkyboxBk = d.Bk; s.SkyboxDn = d.Dn; s.SkyboxFt = d.Ft
+    s.SkyboxLf = d.Lf; s.SkyboxRt = d.Rt; s.SkyboxUp = d.Up
+end
+local function ResetSky()
+    local s = Lighting:FindFirstChild("Nebesny_Sky")
+    if s then s:Destroy() end
+end
+
+-- Логика Воды
+local function WaterAction(action, color)
+    local t = Workspace:FindFirstChildOfClass("Terrain")
+    if t then
+        if action == "remove" then t.WaterTransparency = 1; t.WaterWaveSize = 0
+        elseif action == "restore" then t.WaterTransparency = 0.3; t.WaterWaveSize = 0.15
+        elseif action == "color" then t.WaterColor = color; t.WaterTransparency = 0.3 end
+    end
+    task.spawn(function()
+        for _, o in ipairs(Workspace:GetDescendants()) do
+            if o:IsA("BasePart") and o ~= t then
+                local n = string.lower(o.Name)
+                if o.Material == Enum.Material.Water or string.find(n, "water") or string.find(n, "ocean") then
+                    if action == "remove" then o.Transparency = 1
+                    elseif action == "restore" then o.Transparency = 0.5
+                    elseif action == "color" then o.Color = color; o.Transparency = 0.5 end
+                end
+            end
+        end
+    end)
+end
+
+-- Заполнение Вкладок
+local VisualTab = CreateTab("Visual", "👁️")
+AddSection(VisualTab, "Camera")
+AddSld(VisualTab, "Field of view", 50, 120, 70, function(v) if Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = v end end)
+AddSection(VisualTab, "Time")
+AddSld(VisualTab, "Time of day", 0, 24, 14, function(v) Lighting.ClockTime = v end)
+AddSection(VisualTab, "Skybox")
+AddBtn(VisualTab, "Reset Skybox", ResetSky)
+AddDrop(VisualTab, "Select skybox", {"HD", "Black Storm", "Snow", "Blue Space", "Sunset", "Galaxy", "Roblox Default"}, function(opt) SetSky(opt) end)
+
+local WaterTab = CreateTab("Water", "🌊")
+AddSection(WaterTab, "Water Color")
+AddBtn(WaterTab, "Blue", function() WaterAction("color", Color3.fromRGB(12, 84, 92)) end)
+AddBtn(WaterTab, "Red", function() WaterAction("color", Color3.fromRGB(150, 30, 30)) end)
+AddBtn(WaterTab, "Green", function() WaterAction("color", Color3.fromRGB(30, 150, 30)) end)
+AddSection(WaterTab, "Visibility")
+AddBtn(WaterTab, "Remove Water", function() WaterAction("remove") end)
+AddBtn(WaterTab, "Restore Water", function() WaterAction("restore") end)
+
+local OptTab = CreateTab("Optimize", "🚀")
+AddSection(OptTab, "Graphics")
+AddTgl(OptTab, "Bright / No Shadows", false, function(s)
+    if s then
+        Lighting.Brightness = 3; Lighting.Ambient = Color3.fromRGB(255, 255, 255); Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        Lighting.FogEnd = 1e9; Lighting.GlobalShadows = false
+        for _, v in ipairs(Lighting:GetChildren()) do if v:IsA("PostEffect") then v.Enabled = false end end
+    else
+        Lighting.Brightness = 2; Lighting.Ambient = Color3.fromRGB(70, 70, 70); Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        Lighting.FogEnd = 100000; Lighting.GlobalShadows = true
+    end
+end)
+AddSection(OptTab, "FPS Mobile")
+AddBtn(OptTab, "Unlock 120 FPS", function() pcall(function() if setfpscap then setfpscap(120) end end) end)
+AddBtn(OptTab, "Max FPS (No Limit)", function() pcall(function() if setfpscap then setfpscap(0) end end) end)
+AddBtn(OptTab, "Reset 60 FPS", function() pcall(function() if setfpscap then setfpscap(60) end end) end)
+
+local SetTab = CreateTab("Settings", "⚙️")
+AddSection(SetTab, "Screen Stretch")
+AddTgl(SetTab, "Stretched Resolution", false, function(s) ToggleStretch(s) end)
+AddSld(SetTab, "Stretch Factor (%)", 50, 150, 80, function(v) SetStretchAmount(v) end)
+AddSection(SetTab, "GUI")
+AddSld(SetTab, "GUI Scale", 50, 150, 100, function(v)
+    local sc = v / 100
+    Window.Size = UDim2.new(0, 580 * sc, 0, 360 * sc)
+    Window.Position = UDim2.new(0.5, -290 * sc, 0.5, -180 * sc)
+end)
+
+-- Статистика (FPS / Ping)
+local StatsGui = Instance.new("ScreenGui")
+StatsGui.Name = "NebesnyStatsGui"
+StatsGui.ResetOnSpawn = false
+StatsGui.Enabled = false
+StatsGui.Parent = PlayerGui
+
+local StatFrame = Instance.new("Frame")
+StatFrame.Size = UDim2.new(0, 130, 0, 46)
+StatFrame.Position = UDim2.new(0, 20, 0, 20)
+StatFrame.BackgroundColor3 = Theme.Bg
+StatFrame.BackgroundTransparency = 0.2
+StatFrame.Parent = StatsGui
+Instance.new("UICorner", StatFrame).CornerRadius = UDim.new(0, 8)
+Drag(StatFrame, StatFrame)
+
+local FpsLbl = Instance.new("TextLabel")
+FpsLbl.Size = UDim2.new(1, 0, 0.5, 0); FpsLbl.BackgroundTransparency = 1; FpsLbl.Text = "FPS: 60"; FpsLbl.TextColor3 = Theme.Accent; FpsLbl.Font = Enum.Font.GothamBold; FpsLbl.TextSize = 13; FpsLbl.Parent = StatFrame
+
+local PingLbl = Instance.new("TextLabel")
+PingLbl.Size = UDim2.new(1, 0, 0.5, 0); PingLbl.Position = UDim2.new(0, 0, 0.5, 0); PingLbl.BackgroundTransparency = 1; PingLbl.Text = "Ping: 0 ms"; PingLbl.TextColor3 = Theme.Text; PingLbl.Font = Enum.Font.GothamBold; PingLbl.TextSize = 13; PingLbl.Parent = StatFrame
+
+local Frames = 0
+local LastTime = tick()
+RunService.RenderStepped:Connect(function()
+    Frames = Frames + 1
+    if tick() - LastTime >= 1 then
+        FpsLbl.Text = "FPS: " .. Frames
+        Frames = 0; LastTime = tick()
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+            PingLbl.Text = "Ping: " .. math.floor(ping) .. " ms"
+        end)
+    end
+end)
+
+local StatsTab = CreateTab("Stats", "📊")
+AddSection(StatsTab, "UI")
+AddTgl(StatsTab, "Show FPS / Ping", false, function(s) StatsGui.Enabled = s end)
+
+-- Инициализация
+Tabs["Visual"].Btn.BackgroundColor3 = Theme.Elem
+Tabs["Visual"].Btn.TextColor3 = Theme.Text
+Tabs["Visual"].Frame.Visible = true
+ToggleBtn.MouseButton1Click:Connect(function() Window.Visible = not Window.Visible end)
+CloseBtn.MouseButton1Click:Connect(function() Window.Visible = false end)
+
+print("[Nebesny Visual] Скрипт успешно загружен! Растяжение экрана теперь работает.")
